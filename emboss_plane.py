@@ -2,7 +2,7 @@ bl_info = {
     "name": "Emboss plane",
     "description": "Emboss and solidify a plane",
     "author": "Coleman Krawczyk",
-    "version": (1, 0),
+    "version": (1, 1),
     "blender": (2, 76, 0),
     "location": "View3D > Tools > Mesh Edit",
     "category": "Mesh",
@@ -13,6 +13,7 @@ import bmesh
 import math
 from mathutils import Vector
 from bpy.props import IntProperty, FloatProperty
+
 
 def createBorderEdge(name, origin, length, width, height):
     # origin is the bottom left vertex of the border edge
@@ -41,6 +42,7 @@ def createBorderEdge(name, origin, length, width, height):
     me.update()
     return ob
 
+
 class EmbossPlane(bpy.types.Operator):
     """Emboss Plane"""
     bl_idname = "object.emboss_plane"
@@ -66,32 +68,32 @@ class EmbossPlane(bpy.types.Operator):
         # get length and width
         lx = bm.edges[0].calc_length()
         ly = bm.edges[1].calc_length()
-        
+
         # make border
         all_objects = bpy.data.objects.keys()
         bpy.ops.object.editmode_toggle()
         object.select = False
         if 'top' in all_objects:
-            bpy.data.objects['top'].select = True       
+            bpy.data.objects['top'].select = True
         if 'bottom' in all_objects:
-            bpy.data.objects['bottom'].select = True       
+            bpy.data.objects['bottom'].select = True
         if 'left' in all_objects:
             bpy.data.objects['left'].select = True
         if 'right' in all_objects:
             bpy.data.objects['right'].select = True
         bpy.ops.object.delete()
         origin = object.location - Vector((ly / 2, (lx / 2) + 1.3 * self.Border_width, self.Base_height))
-        topBorder = createBorderEdge('top', origin, ly, self.Border_width, self.Height)
+        createBorderEdge('top', origin, ly, self.Border_width, self.Height)
         origin = object.location - Vector((ly / 2, (lx / 2) + 2.6 * self.Border_width, self.Base_height))
-        topBorder = createBorderEdge('bottom', origin, ly, self.Border_width, self.Height)
+        createBorderEdge('bottom', origin, ly, self.Border_width, self.Height)
         origin = object.location - Vector((ly / 2,  (lx / 2) + 3.9 * self.Border_width, self.Base_height))
-        topBorder = createBorderEdge('left', origin, lx, self.Border_width, self.Height)
+        createBorderEdge('left', origin, lx, self.Border_width, self.Height)
         origin = object.location - Vector((ly / 2, (lx / 2) + 5.2 * self.Border_width, self.Base_height))
-        topBorder = createBorderEdge('right', origin, lx, self.Border_width, self.Height)
-        
+        createBorderEdge('right', origin, lx, self.Border_width, self.Height)
+
         object.select = True
         bpy.ops.object.editmode_toggle()
-        
+
         # get object
         bm = bmesh.from_edit_mesh(object.data)
         if hasattr(bm.verts, "ensure_lookup_table"):
@@ -104,17 +106,13 @@ class EmbossPlane(bpy.types.Operator):
         ny = round(math.sqrt(self.B/A)) - 1
 
         # make loop cuts
-        bpy.ops.mesh.loopcut_slide(MESH_OT_loopcut={"number_cuts":nx, "edge_index":0})
-        bpy.ops.mesh.loopcut_slide(MESH_OT_loopcut={"number_cuts":ny, "edge_index":1})
+        bpy.ops.mesh.loopcut_slide(MESH_OT_loopcut={"number_cuts": nx, "edge_index": 0})
+        bpy.ops.mesh.loopcut_slide(MESH_OT_loopcut={"number_cuts": ny, "edge_index": 1})
         bpy.ops.mesh.select_all(action='TOGGLE')
 
         # make vertex groups
         bound = [v.index for v in bm.verts if v.is_boundary]
         face = [v.index for v in bm.verts if not v.is_boundary]
-        #boundary = [v for v in bm.verts if v.is_boundary]
-        #near_bound = findConnectedVerts(boundary, bm, maxdepth=self.Border_width)
-        #bound = [v.index for v in near_bound]
-        #face = [v.index for v in bm.verts if v.index not in bound]
         vgk = object.vertex_groups.keys()
         if 'boundary' not in vgk:
             object.vertex_groups.new('boundary')
@@ -155,7 +153,7 @@ class EmbossPlane(bpy.types.Operator):
         mod = object.modifiers.keys()
         if 'Displacement' not in tex:
             iTex = bpy.data.textures.new('Displacemnt', type='IMAGE')
-            iTex.image = bpy.data.images[-1] #assume last image loaded is the correct one
+            iTex.image = bpy.data.images[-1]  # assume last image loaded is the correct one
         if 'bump' not in mod:
             displace = object.modifiers.new(name='bump', type='DISPLACE')
             displace.texture = iTex
@@ -184,12 +182,15 @@ class EmbossPlane(bpy.types.Operator):
         good = good and object.mode == 'EDIT'
         return good
 
+
 def add_object_button(self, context):
     self.layout.operator(EmbossPlane.bl_idname, text=EmbossPlane.__doc__)
+
 
 def register():
     bpy.utils.register_class(EmbossPlane)
     bpy.types.VIEW3D_PT_tools_meshedit.append(add_object_button)
+
 
 def unregister():
     bpy.utils.unregister_class(EmbossPlane)
